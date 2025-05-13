@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Control de Relés</title>
+</head>
+
+<body>
+    <h1>Control de Relés</h1>
+    <button onclick="enviarComando(1, 'on')">Relé 1 ON</button>
+    <button onclick="enviarComando(1, 'off')">Relé 1 OFF</button><br>
+    <button onclick="enviarComando(2, 'on')">Relé 2 ON</button>
+    <button onclick="enviarComando(2, 'off')">Relé 2 OFF</button><br>
+
+    <script>
+        const API_URL = "http://172.16.20.209:5000/api/rele";  // IP de la máquina con la API
+
+        function enviarComando(rele, estado) {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rele: rele, estado: estado })
+            })
+                .then(response => response.json())
+                .then(data => alert(data.mensaje || data.error))
+                .catch(error => alert("Error: " + error));
+        }
+    </script>
+</body>
+
+</html>
