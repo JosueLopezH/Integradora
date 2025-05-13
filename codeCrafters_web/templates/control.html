@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Control de Huellas Digitales</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: Helvetica, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .button {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            padding: 10px;
+            border: none;
+            width: 100%;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #404040;
+        }
+
+        .log-area {
+            background-color: #2d2d2d;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        input {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border: none;
+            padding: 5px;
+            margin: 5px 0;
+        }
+        .navbar {
+      background-color: #333;
+      padding: 1rem;
+      width: 100%;
+      /* Abarca todo el ancho de la pantalla */
+      position: fixed;
+      /* Fija la barra en la parte superior */
+      top: 0;
+      /* Alinea la barra en la parte superior */
+      left: 0;
+      /* Alinea la barra a la izquierda */
+      z-index: 1000;
+      /* Asegura que esté por encima de otros elementos */
+    }
+
+    .navbar-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar-brand {
+      color: white;
+      font-size: 1.5rem;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .nav-button {
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+
+    .nav-button:hover {
+      background-color: #555;
+    }
+
+    /* Ajuste para el contenido principal */
+    body {
+      margin-top: 70px;
+      /* Espacio para evitar que el contenido quede debajo de la barra fija */
+    }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">Sistema de Registro</a>
+            <div class="nav-links">
+                <a href="/control" class="nav-button">Control de Cerraduras</a>
+                <a href="/crud" class="nav-button">Registro</a>
+                <a href="/" class="nav-button">Salir de Sesión</a>
+            </div>
+        </div>
+    </nav>
+    <h2>Control de Huellas Digitales</h2>
+
+    <button id="connectBtn" class="button" onclick="toggleConnection()">
+        {{ 'Desconectar' if connected else 'Conectar' }}
+    </button>
+
+    <input id="enrollId" type="text" placeholder="ID (1 o 2)">
+    <button class="button" onclick="enrollFingerprint()">Registrar Huella</button>
+
+    <input id="deleteId" type="text" placeholder="ID (1 o 2)">
+    <button class="button" onclick="deleteFingerprint()">Borrar Huella</button>
+
+    <button id="lockBtn" class="button" onclick="toggleLockMode()">
+        {{ 'Salir del modo apertura' if lock_mode else 'Modo Apertura' }}
+    </button>
+
+    <div class="log-area" id="logArea"></div>
+
+    <script>
+        function updateUI(data) {
+            if (data.logs) {
+                document.getElementById('logArea').innerHTML = data.logs.join('<br>');
+            }
+            if (data.hasOwnProperty('lock_mode')) {
+                document.getElementById('lockBtn').innerText =
+                    data.lock_mode ? 'Volver al modo apertura' : 'Modo Apertura';
+            }
+        }
+
+        function toggleConnection() {
+            const currentText = document.getElementById('connectBtn').innerText;
+            fetch('/control/' + (currentText === 'Conectar' ? 'connect' : 'disconnect'), {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('connectBtn').innerText =
+                            currentText === 'Conectar' ? 'Desconectar' : 'Conectar';
+                    }
+                    updateUI(data);
+                });
+        }
+
+        function enrollFingerprint() {
+            const id = document.getElementById('enrollId').value;
+            fetch('/control/enroll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + encodeURIComponent(id)
+            })
+                .then(response => response.json())
+                .then(updateUI);
+        }
+
+        function deleteFingerprint() {
+            const id = document.getElementById('deleteId').value;
+            fetch('/control/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + encodeURIComponent(id)
+            })
+                .then(response => response.json())
+                .then(updateUI);
+        }
+
+        function toggleLockMode() {
+            fetch('/control/mode', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(updateUI);
+        }
+
+        setInterval(() => {
+            fetch('/control/serial_output')
+                .then(response => response.json())
+                .then(updateUI);
+        }, 1000);
+    </script>
+    <script>
+        function updateUI(data) {
+            const logArea = document.getElementById('logArea');
+            logArea.innerHTML = data.logs.join('<br>');
+
+            // Scroll automático al final
+            logArea.scrollTop = logArea.scrollHeight;
+
+            if (data.hasOwnProperty('lock_mode')) {
+                document.getElementById('lockBtn').innerText =
+                    data.lock_mode ? 'Volver al modo apertura' : 'Modo Apertura';
+            }
+        }
+
+        function toggleConnection() {
+            fetch('/control/' + (document.getElementById('connectBtn').innerText === 'Conectar' ? 'connect' : 'disconnect'), {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const btn = document.getElementById('connectBtn');
+                    btn.innerText = btn.innerText === 'Conectar' ? 'Desconectar' : 'Conectar';
+
+                    // Limpia campos al desconectar
+                    if (btn.innerText === 'Conectar') {
+                        document.getElementById('enrollId').value = '';
+                        document.getElementById('deleteId').value = '';
+                    }
+
+                    updateUI(data);
+                });
+        }
+
+        function enrollFingerprint() {
+            const idField = document.getElementById('enrollId');
+            fetch('/control/enroll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + idField.value
+            })
+                .then(response => response.json())
+                .then(data => {
+                    updateUI(data);
+                    idField.value = '';  // Limpiar campo
+                });
+        }
+
+        function deleteFingerprint() {
+            const idField = document.getElementById('deleteId');
+            fetch('/control/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + idField.value
+            })
+                .then(response => response.json())
+                .then(data => {
+                    updateUI(data);
+                    idField.value = '';  // Limpiar campo
+                });
+        }
+
+        function toggleLockMode() {
+            fetch('/control/mode', { method: 'POST' })
+                .then(response => response.json())
+                .then(updateUI);
+        }
+
+        // Actualizar logs periódicamente
+        setInterval(() => {
+            fetch('/control/serial_output')
+                .then(response => response.json())
+                .then(updateUI);
+        }, 1000);
+    </script>
+
+</body>
+
+</html>

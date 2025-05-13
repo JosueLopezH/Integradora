@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Usuarios</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    /* Estilos para la barra de navegación */
+    .navbar {
+      background-color: #333;
+      padding: 1rem;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+    }
+
+    .navbar-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar-brand {
+      color: white;
+      font-size: 1.5rem;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .nav-button {
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+
+    .nav-button:hover {
+      background-color: #555;
+    }
+
+    body {
+      margin-top: 70px;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-brand">Sistema de Registro</a>
+      <div class="nav-links">
+        <a href="/control" class="nav-button">Control de Cerraduras</a>
+        <a href="/crud" class="nav-button">Registro</a>
+        <a href="/" class="nav-button">Salir de Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <div class="left-column">
+      <div class="containerCrudRegistro">
+        <div class="contenCrede">
+          <h2>Registro de usuarios</h2>
+          <form id="registroForm">
+            <div class="caja">
+              <label>¿Es administrador?</label>
+              <select name="admin" class="select" id="adminSelect" required>
+                <option value="" disabled selected>Selecciona una opción</option>
+                <option value="true">Sí</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+            <div class="caja">
+              <label for="nombre">Nombre</label>
+              <input class="input" name="nombre" placeholder="Ingresa el Nombre" type="text" required>
+            </div>
+            <div class="caja" id="casilleroContainer">
+              <label for="casillero">Casillero / huella</label>
+              <select class="select" name="casilleroHuellas" id="casilleroSelect">
+                <option value="" disabled selected>Selecciona un casillero</option>
+                {% for locker in available_lockers %}
+                <option value="{{ locker }}">{{ locker }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="caja">
+              <label for="correo">Correo</label>
+              <input class="input" name="correo" placeholder="Ingresa el Correo" type="text" required>
+            </div>
+            <div class="caja">
+              <label for="password">Contraseña</label>
+              <input class="input" name="password" placeholder="Ingresa la Contraseña" type="password" required>
+            </div>
+            <div class="caja">
+              <button class="botonRegistro" type="submit">Registrar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="containerCrud">
+        <h2>Tabla de usuarios</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Casillero / huella</th>
+              <th>Correo</th>
+              <th>Borrar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users if not user['admin'] %}
+            <tr>
+              <td>{{ user['nombre'] }}</td>
+              <td>{{ user.get('casilleroHuellas', 'No asignado') }}</td>
+              <td>{{ user['correo'] }}</td>
+              <td>
+                <a class="botonDelete" href="{{ url_for('users.delete_user', uid_usuario=user['id']) }}">
+                  <img class="imgIcon" src="{{ url_for('static', filename='img/deleteIcon.png') }}" alt="Borrar">
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="containerCrud" style="margin-top: 40px;">
+        <h2>Administradores</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Borrar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users if user['admin'] %}
+            <tr>
+              <td>{{ user['nombre'] }}</td>
+              <td>{{ user['correo'] }}</td>
+              <td>
+                <a class="botonDelete" href="{{ url_for('users.delete_user', uid_usuario=user['id']) }}">
+                  <img class="imgIcon" src="{{ url_for('static', filename='img/deleteIcon.png') }}" alt="Borrar">
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const adminSelect = document.getElementById('adminSelect');
+    const casilleroContainer = document.getElementById('casilleroContainer');
+    const casilleroSelect = document.getElementById('casilleroSelect');
+
+    adminSelect.addEventListener('change', function () {
+      if (this.value === 'true') {
+        casilleroContainer.style.display = 'none';
+        casilleroSelect.removeAttribute('required');
+      } else {
+        casilleroContainer.style.display = 'block';
+        casilleroSelect.setAttribute('required', 'required');
+      }
+    });
+
+    document.getElementById('registroForm').addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const nombre = document.querySelector('input[name="nombre"]').value.trim();
+      const correo = document.querySelector('input[name="correo"]').value.trim();
+      const password = document.querySelector('input[name="password"]').value.trim();
+      const admin = adminSelect.value;
+      const casilleroHuellas = casilleroSelect.value;
+
+      if (!nombre || !correo || !password || !admin) {
+        alert('Error: Todos los campos obligatorios deben estar completos.');
+        return;
+      }
+
+      if (admin === 'false' && !casilleroHuellas) {
+        alert('Error: Los usuarios no administradores deben tener un casillero asignado.');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(correo)) {
+        alert('Error: Por favor ingresa un correo electrónico válido.');
+        return;
+      }
+
+      try {
+        const response = await fetch('{{ url_for("users.add") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre,
+            correo,
+            password,
+            admin: admin === 'true',
+            casilleroHuellas: casilleroHuellas ? parseInt(casilleroHuellas) : null
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert('Usuario registrado exitosamente');
+          window.location.reload(); 
+        } else {
+          alert(data.error || 'Error al registrar el usuario');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al conectar con el servidor');
+      }
+    });
+  </script>
+</body>
+
+</html>
